@@ -79,6 +79,33 @@ func init() {
 			},
 		},
 	}
+
+	resourceMap["a"] = []TagNode{
+		TagNode{
+			ValType: ValImage,
+			Attrs: []string{
+				"href",
+			},
+		},
+		TagNode{
+			ValType: ValScript,
+			Attrs: []string{
+				"href",
+			},
+		},
+	}
+}
+
+func (h DefaultHandler) validUrl(urlstr string) bool {
+
+	if strings.HasPrefix(urlstr, "http://") || strings.HasPrefix(urlstr, "https://") {
+		return true
+	} else if strings.HasPrefix(urlstr, "//") && len(urlstr) > 2 {
+		return true
+	} else if strings.HasPrefix(urlstr, "/") && len(urlstr) > 1 {
+		return true
+	}
+	return false
 }
 
 func AddTagNode(tag string, node []TagNode) map[string][]TagNode {
@@ -107,8 +134,8 @@ func (h *DefaultHandler) TagsFilter(tag string) ([]TagNode, bool) {
 }
 
 func (h DefaultHandler) OnImage(parnUrl *url.URL, tag, key, val string, sel *Selection) (string, bool) {
-	if tag == "link" {
-		if !h.HasSuffix(val, imageExts) {
+	if tag == "link" || tag == "a" {
+		if !HasSuffix(val, imageExts) {
 			return val, false
 		}
 	}
@@ -116,8 +143,8 @@ func (h DefaultHandler) OnImage(parnUrl *url.URL, tag, key, val string, sel *Sel
 }
 
 func (h DefaultHandler) OnScript(parnUrl *url.URL, tag, key, val string, sel *Selection) (string, bool) {
-	if tag == "link" {
-		if !h.HasSuffix(val, scriptExts) {
+	if tag == "link" || tag == "a" {
+		if !HasSuffix(val, scriptExts) {
 			return val, false
 		}
 	}
@@ -125,7 +152,9 @@ func (h DefaultHandler) OnScript(parnUrl *url.URL, tag, key, val string, sel *Se
 }
 
 func (h DefaultHandler) parseUrl(parnUrl *url.URL, urlstr string) (string, bool) {
-
+	if !h.validUrl(urlstr) {
+		return urlstr, false
+	}
 	u, err := url.Parse(urlstr)
 	if err != nil {
 		return urlstr, false
@@ -144,11 +173,19 @@ func (h DefaultHandler) parseUrl(parnUrl *url.URL, urlstr string) (string, bool)
 	return newUrl, true
 }
 
-func (h DefaultHandler) HasSuffix(str string, exts []string) bool {
+func HasSuffix(str string, exts []string) bool {
 	for _, ext := range exts {
 		if strings.HasSuffix(str, ext) {
 			return true
 		}
 	}
 	return false
+}
+
+func IsImageUrl(s string) bool {
+	return HasSuffix(s, imageExts)
+}
+
+func IsJsUrl(s string) bool {
+	return HasSuffix(s, scriptExts)
 }
