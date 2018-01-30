@@ -104,6 +104,8 @@ func (h DefaultHandler) validUrl(urlstr string) bool {
 		return true
 	} else if strings.HasPrefix(urlstr, "/") && len(urlstr) > 1 {
 		return true
+	} else if strings.HasPrefix(urlstr, "data:image/") {
+		return true
 	}
 	return false
 }
@@ -174,8 +176,13 @@ func (h DefaultHandler) parseUrl(parnUrl *url.URL, urlstr string) (string, bool)
 }
 
 func HasSuffix(str string, exts []string) bool {
+	u, err := url.Parse(str)
+	if err != nil {
+		return false
+	}
+
 	for _, ext := range exts {
-		if strings.HasSuffix(str, ext) {
+		if strings.HasSuffix(u.Path, ext) {
 			return true
 		}
 	}

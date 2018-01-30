@@ -16,6 +16,7 @@ type HtmlParser struct {
 	MaxRedirect        int
 	handler            TagHandler
 	Preview            DocumentPreview
+	TagsMap            map[string][]TagNode
 }
 
 type Selection struct {
@@ -62,7 +63,35 @@ func Scrape(opts *Options) (*Document, error) {
 		Body:        body,
 		MaxRedirect: opts.MaxRedirect,
 		handler:     opts.Handler,
+		TagsMap:     resourceMap,
 	}).Scrape()
+}
+
+func NewScrape(opts *Options) (*HtmlParser, error) {
+	u, err := url.Parse(opts.Url)
+	if err != nil {
+		return nil, err
+	}
+	var body []byte
+	if opts.HtmlFile != "" {
+		content, err := ioutil.ReadFile(opts.HtmlFile)
+		if err != nil {
+			return nil, err
+		}
+		body = content
+	} else {
+		body = []byte(opts.Body[:])
+	}
+	if opts.Handler == nil {
+		opts.Handler = &DefaultHandler{}
+	}
+	return &HtmlParser{
+		Url:         u,
+		Body:        body,
+		MaxRedirect: opts.MaxRedirect,
+		handler:     opts.Handler,
+		TagsMap:     resourceMap,
+	}, nil
 }
 
 func (scraper *HtmlParser) Scrape() (*Document, error) {
@@ -75,6 +104,11 @@ func (scraper *HtmlParser) Scrape() (*Document, error) {
 		return nil, err
 	}
 	return doc, nil
+}
+
+func (scraper *HtmlParser) AddTagNode(tag string, node []TagNode) {
+	scraper.TagsMap[tag] = node
+	return
 }
 
 func (scraper *HtmlParser) getDocument() (*Document, error) {
@@ -106,7 +140,7 @@ func (scraper *HtmlParser) parseDocument(doc *Document) error {
 
 	doc.Preview.Title = doc.Find("title").Eq(0).Text()
 
-	for tagName, tagNodes := range resourceMap {
+	for tagName, tagNodes := range scraper.TagsMap {
 
 		doc.Find(tagName).Each(func(index int, sel *goquery.Selection) {
 			for _, node := range tagNodes {
